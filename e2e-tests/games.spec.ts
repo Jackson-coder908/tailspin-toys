@@ -24,6 +24,31 @@ test.describe('Game Listing and Navigation', () => {
     });
   });
 
+  test('should sort games by title and star rating', async ({ page }) => {
+    await page.goto('/');
+    const cards = page.getByTestId('game-card');
+    const sortControl = page.getByTestId('game-sort');
+
+    const ascendingTitles = await cards.getByTestId('game-title').allTextContents();
+    await sortControl.selectOption('title-desc');
+    await expect(cards.first().getByTestId('game-title')).toHaveText(ascendingTitles[ascendingTitles.length - 1]);
+    const descendingTitles = await cards.getByTestId('game-title').allTextContents();
+    expect(descendingTitles).toEqual([...ascendingTitles].reverse());
+
+    await sortControl.selectOption('rating-desc');
+    const ratingValues = await cards.evaluateAll((gameCards) =>
+      gameCards.map((card) => {
+        const rating = card.getAttribute('data-game-rating');
+        return rating === null ? null : Number(rating);
+      }),
+    );
+    const ratedValues = ratingValues.filter((rating): rating is number => rating !== null);
+    expect(ratedValues).toEqual([...ratedValues].sort((left, right) => right - left));
+    expect(ratingValues.slice(ratedValues.length)).toEqual(
+      ratingValues.slice(ratedValues.length).map(() => null),
+    );
+  });
+
   test('should navigate to correct game details page when clicking on a game', async ({ page }) => {
     let gameId: string | null;
     let gameTitle: string | null;
